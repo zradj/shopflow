@@ -90,7 +90,7 @@ H2 JDBC URL: `jdbc:h2:mem:shopflowdb` · User: `sa` · Password: _(empty)_
 curl http://localhost:8080/api/products
 
 # 2. Get all customers (note the IDs)
-curl http://localhost:8080/api/customers   # if you add this endpoint, or check H2 console
+curl http://localhost:8080/api/customers
 
 # 3. Place an order
 curl -X POST http://localhost:8080/api/orders \

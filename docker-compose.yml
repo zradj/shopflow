@@ -1,0 +1,34 @@
+services:
+
+  # ── Redis ───────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: shopflow-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  # ── ShopFlow Application ────────────────────────────────────────
+  shopflow:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: shopflow-app
+    ports:
+      - "8080:8080"
+    environment:
+      # Override Redis host to the Compose service name
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      # Optional overrides — uncomment to change behaviour:
+      # SHOPFLOW_GATEWAY_FAILURE_RATE_PERCENT: 60   # trigger circuit breaker
+      # SHOPFLOW_CACHE_PRODUCT_TTL_MS: 60000        # 1-minute cache TTL
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped

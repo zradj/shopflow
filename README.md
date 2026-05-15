@@ -287,52 +287,83 @@ resilience4j.circuitbreaker.instances.paymentGateway.wait-duration-in-open-state
 
 ## 9. Architecture Diagram
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                        API Layer                                │
-│  OrderController   ProductController   InventoryController      │
-│         │                  │                   │               │
-│         └──────────────────┼───────────────────┘               │
-└──────────────────────────── │ ──────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│              OrderFacade  [Facade Pattern]                       │
-│  1. Resolve Customer                                            │
-│  2. Build Order  ──────────────────── [Builder Pattern]         │
-│  3. Apply Discount  ───────────────── [Strategy Pattern]        │
-│  4. Persist Order                                               │
-│  5. Validate Stock                                              │
-│  6. Process Payment  ──────────────── [Factory Method Pattern]  │
-│  7. Update Order Status                                         │
-│  8. Deduct Stock                                                │
-│  9. Publish Event  ────────────────── [Observer Pattern]        │
-└─────────────────────────────────────────────────────────────────┘
-          │                    │                      │
-          ▼                    ▼                      ▼
-┌─────────────────┐  ┌────────────────┐   ┌─────────────────────┐
-│  ProductService │  │  OrderService  │   │  InventoryService   │
-│  [Decorator]    │  │                │   │                     │
-│  CachingProduct │  │  OrderService  │   │  InventoryService   │
-│  Service        │  │  Impl          │   │  Impl               │
-│      │          │  └────────┬───────┘   └──────────┬──────────┘
-│      │  Redis   │           │                       │
-│      ├──────────┤           ▼                       │
-│      │          │     OrderRepository               │
-│  Product        │                           ProductRepository
-│  ServiceImpl    │
-└────────┬────────┘
-         │
-         ▼
-┌──────────────────────────────────────────┐
-│          Infrastructure                  │
-│  PaymentProcessorFactory [Factory Method]│
-│  MockPaymentGatewayClient [CircuitBreaker│
-│  OrderEventPublisher [Observer Subject]  │
-│  InventoryDeductionListener (sync)       │
-│  NotificationListener (async VT)         │
-│  AnalyticsListener (async VT)            │
-└──────────────────────────────────────────┘
+```mermaid
+---
+title: ShopFlow — Architecture & Pattern Interactions
+---
+flowchart TD
+
+  subgraph API["API Layer"]
+    OC["OrderController\n POST /api/orders"]
+    PC["ProductController\n GET /api/products"]
+    IC["InventoryController\n PATCH /api/inventory"]
+  end
+
+  subgraph FAC["Facade Pattern"]
+    OF["OrderFacade\n resolve › build › discount › persist › validate › pay › status › deduct › publish"]
+  end
+
+  subgraph SVC["Application Services"]
+    DS["DiscountStrategy\n Strategy Pattern\n No / Percentage / Loyalty"]
+    OS["OrderService\n persist and retrieve orders"]
+    IS["InventoryService\n validate and deduct stock"]
+  end
+
+  subgraph INF["Infrastructure"]
+    CP["CachingProductService\n Decorator + Cache-Aside"]
+    PF["PaymentProcessorFactory\n Factory Method\n CreditCard / Wallet"]
+    EP["OrderEventPublisher\n Observer Subject"]
+  end
+
+  subgraph OBS["Observers — OrderPlacedEvent"]
+    L1["InventoryDeductionListener\n sync, same transaction"]
+    L2["NotificationListener\n @Async, virtual thread"]
+    L3["AnalyticsListener\n @Async, virtual thread"]
+  end
+
+  subgraph EXT["External Systems"]
+    RD[("Redis\n product cache, 5 min TTL")]
+    H2[("H2 Database\n orders, products, customers")]
+    GW["MockPaymentGatewayClient\n @CircuitBreaker\n fallback to PAYMENT_FAILED"]
+  end
+
+  subgraph VT["Java 21 Virtual Threads — cross-cutting"]
+    VTC["Tomcat executor — every HTTP request"]
+    VTA["@Async executor — all async listeners"]
+  end
+
+  OC --> OF
+  PC --> OF
+  IC --> OF
+
+  OF --> DS
+  OF --> OS
+  OF --> IS
+
+  IS --> CP
+  OS --> H2
+  CP --> RD
+
+  OF --> PF
+  PF --> GW
+
+  OF --> EP
+  EP -.->|"«event»"| L1
+  EP -.->|"«event»"| L2
+  EP -.->|"«event»"| L3
+
+  classDef facade    fill:#7F77DD,stroke:#534AB7,color:#EEEDFE
+  classDef structural fill:#1D9E75,stroke:#0F6E56,color:#E1F5EE
+  classDef behavioural fill:#D85A30,stroke:#993C1D,color:#FAECE7
+  classDef external  fill:#888780,stroke:#5F5E5A,color:#F1EFE8
+  classDef resilience fill:#BA7517,stroke:#854F0B,color:#FAEEDA
+  classDef vt        fill:#1D9E75,stroke:#0F6E56,color:#E1F5EE
+
+  class OF facade
+  class CP,VTC,VTA structural
+  class DS,PF,EP,L1,L2,L3 behavioural
+  class RD,H2 external
+  class GW resilience
 ```
 
 ---

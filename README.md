@@ -120,17 +120,20 @@ Set `shopflow.gateway.failure-rate-percent=60` in `application.properties`, rest
 
 ## 4. API Reference
 
-| Method | Path | Description |
-|---|---|---|
-| `GET` | `/api/products` | All products (cached) |
-| `GET` | `/api/products/{id}` | Single product (cached) |
-| `GET` | `/api/products/category/{cat}` | Products by category (cached) |
-| `GET` | `/api/products/in-stock` | In-stock products (cached) |
-| `POST` | `/api/orders` | Place a new order (full flow) |
-| `GET` | `/api/orders/{id}` | Order detail with line items |
-| `GET` | `/api/orders/customer/{customerId}` | All orders for a customer |
-| `PATCH` | `/api/inventory/{productId}/stock` | Set absolute stock level |
-| `GET` | `/api/inventory/{productId}/stock` | Live stock count (DB read) |
+| Method  | Path                                | Description                   |
+|---------|-------------------------------------|-------------------------------|
+| `GET`   | `/api/customers`                    | All customers                 |
+| `GET`   | `/api/customers/{id}`               | Single customer               |
+| `POST`  | `/api/customers`                    | Create a new customer         |
+| `GET`   | `/api/products`                     | All products (cached)         |
+| `GET`   | `/api/products/{id}`                | Single product (cached)       |
+| `GET`   | `/api/products/category/{cat}`      | Products by category (cached) |
+| `GET`   | `/api/products/in-stock`            | In-stock products (cached)    |
+| `POST`  | `/api/orders`                       | Place a new order (full flow) |
+| `GET`   | `/api/orders/{id}`                  | Order detail with line items  |
+| `GET`   | `/api/orders/customer/{customerId}` | All orders for a customer     |
+| `PATCH` | `/api/inventory/{productId}/stock`  | Set absolute stock level      |
+| `GET`   | `/api/inventory/{productId}/stock`  | Live stock count (DB read)    |
 
 All error responses share a uniform shape:
 
